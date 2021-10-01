@@ -1,7 +1,8 @@
 import numpy as np
 import cv2
-import albumentations as A
+# import albumentations as A
 from functools import partial
+from skimage.exposure import match_histograms
 
 class MonoAug:
     def __init__(self, mode='int'):
@@ -52,6 +53,50 @@ class MonoAug:
     '''
     def poly(self, x, a): 
         return np.power(x, a * np.ones_like(x))
+
+    def hm(self, x, y):
+        return match_histograms(x, y)
+
+    @staticmethod
+    def wiggle_map(dev, verbose=False):
+        map_out = np.zeros(256)
+        rand = np.random.randint(-dev, dev + 1)
+        for i in range(len(map_out)):
+            if i == 0: 
+                continue
+            if i == 255:
+                map_out[i] = 255
+                break
+            if rand > 0:
+                map_out[i] = 1 + rand + map_out[i-1]
+                rand = np.random.randint(-dev, dev + 1)
+            elif rand < 0:
+                rand += 1
+                map_out[i] = map_out[i-1]
+            else:
+                rand = np.random.randint(-dev, dev + 1)
+                map_out[i] = 1 + map_out[i-1]
+            # print(i, "map_out[i]" , map_out[i])
+        map_out[map_out > 255] = 255
+        '''
+        i = 0
+        while map_out[i] < 256:
+            rand = np.random.randint(-dev, dev + 1)
+            if rand < 0: 
+                for k in range(i, i-rand):
+                    map_out[k:] -= rand * np.ones_like(map_out[k:])
+                i -= rand
+            else:
+                map_out[i:] += rand * np.ones_like(map_out[i:])
+                i += 1
+            print(i)
+        '''
+        return map_out
+
+    def wiggle(self, x, dev):
+        wmap = self.wiggle_map(dev)
+        
+
 
     def random(self, x, num_ops):
         choices = ['poly', 'sinu']
