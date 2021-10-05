@@ -78,25 +78,16 @@ class MonoAug:
                 map_out[i] = 1 + map_out[i-1]
             # print(i, "map_out[i]" , map_out[i])
         map_out[map_out > 255] = 255
-        '''
-        i = 0
-        while map_out[i] < 256:
-            rand = np.random.randint(-dev, dev + 1)
-            if rand < 0: 
-                for k in range(i, i-rand):
-                    map_out[k:] -= rand * np.ones_like(map_out[k:])
-                i -= rand
-            else:
-                map_out[i:] += rand * np.ones_like(map_out[i:])
-                i += 1
-            print(i)
-        '''
         return map_out
 
     def wiggle(self, x, dev):
         wmap = self.wiggle_map(dev)
-        
-
+        out = np.ravel(x)
+        out = [wmap[i] for i in out]
+        out = np.array(out).astype(int).reshape(x.shape)
+        out[:,:,1] = out[:,:,2]
+        out[:,:,0] = out[:,:,2]
+        return out
 
     def random(self, x, num_ops):
         choices = ['poly', 'sinu']
