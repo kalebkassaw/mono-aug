@@ -4,17 +4,17 @@ import cv2
 from functools import partial
 from skimage.exposure import match_histograms
 
-class MonoAug:
-    def __init__(self, mode='int'):
+def load_image(fname, gray=True):
+    if gray:
+        return cv2.imread(fname, 0)
+    else:
+        return cv2.imread(fname)
+
+class MonoFunc:
+    def __init__(self, mode='int', gray=True):
         self.float = mode != 'int'
         self.period = 1 if self.float else 255
 
-    def load_image(self, fname, mode='gray'):
-        if mode == 'gray':
-            return cv2.imread(fname, 0)
-        else:
-            return cv2.imread(fname)
-    
     def norm(self, x):
         if len(x.shape) == 3:
             max = np.amax(x, axis=2)
@@ -57,6 +57,20 @@ class MonoAug:
     def hm(self, x, y):
         return match_histograms(x, y)
 
+class Wiggle:
+    def __init__(self, mode='int', gray=True):
+        self.float = mode != 'int'
+        self.period = 1 if self.float else 255
+        self.gray = gray
+
+    def __call__(self, x, dev):
+        if not isinstance(x, np.ndarray):
+            x = load_image(x, self.gray)
+        if self.gray:
+            return wiggle_1ch(self, x, dev)
+        else:
+            return wiggle_3ch(self, x, dev)
+
     @staticmethod
     def wiggle_map(dev, verbose=False):
         map_out = np.zeros(256)
@@ -80,14 +94,19 @@ class MonoAug:
         map_out[map_out > 255] = 255
         return map_out
 
-    def wiggle(self, x, dev):
+    def wiggle_1ch(self, x, dev):
+        x = x[:, :, 0]
         wmap = self.wiggle_map(dev)
         out = np.ravel(x)
         out = [wmap[i] for i in out]
         out = np.array(out).astype(int).reshape(x.shape)
-        out[:,:,1] = out[:,:,2]
-        out[:,:,0] = out[:,:,2]
         return out
+
+    def wiggle_3ch(self, x, dev):
+        wmap = self.wiggle_map(dev)
+        out = [np.ravel(x[:,:,i]) for i in range(3)]
+        out = [[wmap[i] for i in a] for a in out]
+        np.concatenate(out, axis=2)
 
     def random(self, x, num_ops):
         choices = ['poly', 'sinu']
