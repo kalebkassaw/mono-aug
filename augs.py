@@ -63,16 +63,15 @@ class Wiggle:
         self.period = 1 if self.float else 255
         self.gray = gray
 
-    def __call__(self, x, dev):
+    def __call__(self, x, dev, save_map=None):
         if not isinstance(x, np.ndarray):
             x = load_image(x, self.gray)
         if self.gray:
-            return wiggle_1ch(self, x, dev)
+            return self.wiggle_1ch(self, x, dev, save_map)
         else:
-            return wiggle_3ch(self, x, dev)
+            return self.wiggle_3ch(self, x, dev, save_map)
 
-    @staticmethod
-    def wiggle_map(dev, verbose=False):
+    def wiggle_map(self, dev, save_map=None):
         map_out = np.zeros(256)
         rand = np.random.randint(-dev, dev + 1)
         for i in range(len(map_out)):
@@ -92,18 +91,20 @@ class Wiggle:
                 map_out[i] = 1 + map_out[i-1]
             # print(i, "map_out[i]" , map_out[i])
         map_out[map_out > 255] = 255
+        if save_map is not None:
+            np.save(save_map, map_out)
         return map_out
 
-    def wiggle_1ch(self, x, dev):
+    def wiggle_1ch(self, x, dev, save_map=None):
         x = x[:, :, 0]
-        wmap = self.wiggle_map(dev)
+        wmap = self.wiggle_map(dev, save_map)
         out = np.ravel(x)
         out = [wmap[i] for i in out]
         out = np.array(out).astype(int).reshape(x.shape)
         return out
 
-    def wiggle_3ch(self, x, dev):
-        wmap = self.wiggle_map(dev)
+    def wiggle_3ch(self, x, dev, save_map=None):
+        wmap = self.wiggle_map(dev, save_map)
         out = [np.ravel(x[:,:,i]) for i in range(3)]
         out = [[wmap[i] for i in a] for a in out]
         np.concatenate(out, axis=2)
