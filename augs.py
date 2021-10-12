@@ -67,9 +67,9 @@ class Wiggle:
         if not isinstance(x, np.ndarray):
             x = load_image(x, self.gray)
         if self.gray:
-            return self.wiggle_1ch(self, x, dev, save_map)
+            return self.wiggle_1ch(x, dev, save_map)
         else:
-            return self.wiggle_3ch(self, x, dev, save_map)
+            return self.wiggle_3ch(x, dev, save_map)
 
     def wiggle_map(self, dev, save_map=None):
         map_out = np.zeros(256)
@@ -106,7 +106,7 @@ class Wiggle:
     def wiggle_3ch(self, x, dev, save_map=None):
         wmap = self.wiggle_map(dev, save_map)
         out = [np.ravel(x[:,:,i]) for i in range(3)]
-        out = [[wmap[i] for i in a] for a in out]
+        out = [np.array([wmap[i] for i in a]) for a in out]
         out = [a.reshape(x[:,:,0].shape) for a in out]
         out = np.stack(out, axis=-1).astype(int)
         return out
