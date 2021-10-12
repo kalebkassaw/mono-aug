@@ -107,7 +107,9 @@ class Wiggle:
         wmap = self.wiggle_map(dev, save_map)
         out = [np.ravel(x[:,:,i]) for i in range(3)]
         out = [[wmap[i] for i in a] for a in out]
-        np.concatenate(out, axis=2)
+        out = [a.reshape(x[:,:,0].shape) for a in out]
+        out = np.stack(out, axis=-1).astype(int)
+        return out
 
     def random(self, x, num_ops):
         choices = ['poly', 'sinu']
