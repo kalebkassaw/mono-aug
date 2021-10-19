@@ -6,6 +6,7 @@
 # Temps
 filenames.json
 filewriter.py
+gammas.py
 
 # User-specific files
 *.rsuser

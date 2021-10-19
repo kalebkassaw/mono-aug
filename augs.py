@@ -6,7 +6,8 @@ from skimage.exposure import match_histograms
 
 def load_image(fname, gray=True):
     if gray:
-        return cv2.imread(fname, 0)
+        a = cv2.imread(fname, 0)
+        return np.stack((a,a,a), axis=-1)
     else:
         return cv2.imread(fname)
 
@@ -66,14 +67,20 @@ class Wiggle:
     def __call__(self, x, dev, save_map=None):
         if not isinstance(x, np.ndarray):
             x = load_image(x, self.gray)
-        if self.gray:
+        '''if self.gray:
             return self.wiggle_1ch(x, dev, save_map)
-        else:
-            return self.wiggle_3ch(x, dev, save_map)
+        else:'''
+        return self.wiggle_3ch(x, dev, save_map)
 
-    def wiggle_map(self, dev, save_map=None):
+    def rand_generator(self, dev, mode):
+        if mode == 'unif':
+            return np.random.randint(-dev, dev + 1)
+        else:
+            return np.around(np.random.normal(0, dev/2), decimals=0).astype(int)
+
+    def wiggle_map(self, dev, mode='norm', save_map=None):
         map_out = np.zeros(256)
-        rand = np.random.randint(-dev, dev + 1)
+        rand = self.rand_generator(dev, mode)
         for i in range(len(map_out)):
             if i == 0: 
                 continue
@@ -82,12 +89,12 @@ class Wiggle:
                 break
             if rand > 0:
                 map_out[i] = 1 + rand + map_out[i-1]
-                rand = np.random.randint(-dev, dev + 1)
+                rand = self.rand_generator(dev, mode)            
             elif rand < 0:
                 rand += 1
                 map_out[i] = map_out[i-1]
             else:
-                rand = np.random.randint(-dev, dev + 1)
+                rand = self.rand_generator(dev, mode)
                 map_out[i] = 1 + map_out[i-1]
             # print(i, "map_out[i]" , map_out[i])
         map_out[map_out > 255] = 255
@@ -96,7 +103,7 @@ class Wiggle:
         return map_out
 
     def wiggle_1ch(self, x, dev, save_map=None):
-        x = x[:, :, 0]
+        if len(x.shape()) == 3: x = x[:,:,0]
         wmap = self.wiggle_map(dev, save_map)
         out = np.ravel(x)
         out = [wmap[i] for i in out]
@@ -104,6 +111,9 @@ class Wiggle:
         return out
 
     def wiggle_3ch(self, x, dev, save_map=None):
+        if self.gray: 
+            x[:,:,1] = x[:,:,0]
+            x[:,:,2] = x[:,:,0]
         wmap = self.wiggle_map(dev, save_map)
         out = [np.ravel(x[:,:,i]) for i in range(3)]
         out = [np.array([wmap[i] for i in a]) for a in out]
