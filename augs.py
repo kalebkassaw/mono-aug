@@ -67,6 +67,9 @@ class Wiggle:
     def __call__(self, x, dev, save_map=None):
         if not isinstance(x, np.ndarray):
             x = load_image(x, self.gray)
+        else:
+            a = x[:,:,0]
+            x = np.stack((a,a,a), axis=-1)
         '''if self.gray:
             return self.wiggle_1ch(x, dev, save_map)
         else:'''
@@ -75,10 +78,12 @@ class Wiggle:
     def rand_generator(self, dev, mode):
         if mode == 'unif':
             return np.random.randint(-dev, dev + 1)
+        elif mode == 'norm':
+            return np.around(np.random.normal(1, dev), decimals=0).astype(int)
         else:
-            return np.around(np.random.normal(0, dev/2), decimals=0).astype(int)
+            return np.around(np.random.laplace(1, dev), decimals=0).astype(int)
 
-    def wiggle_map(self, dev, mode='norm', save_map=None):
+    def wiggle_map(self, dev, mode='lapl', save_map=None):
         map_out = np.zeros(256)
         rand = self.rand_generator(dev, mode)
         for i in range(len(map_out)):
@@ -88,21 +93,21 @@ class Wiggle:
                 map_out[i] = 255
                 break
             if rand > 0:
-                map_out[i] = 1 + rand + map_out[i-1]
+                map_out[i] = rand + map_out[i-1]
                 rand = self.rand_generator(dev, mode)            
             elif rand < 0:
                 rand += 1
                 map_out[i] = map_out[i-1]
             else:
                 rand = self.rand_generator(dev, mode)
-                map_out[i] = 1 + map_out[i-1]
+                map_out[i] = map_out[i-1]
             # print(i, "map_out[i]" , map_out[i])
         map_out[map_out > 255] = 255
         if save_map is not None:
             np.save(save_map, map_out)
         return map_out
 
-    def wiggle_1ch(self, x, dev, save_map=None):
+    '''def wiggle_1ch(self, x, dev, save_map=None):
         if len(x.shape()) == 3: x = x[:,:,0]
         wmap = self.wiggle_map(dev, save_map)
         out = np.ravel(x)
@@ -119,7 +124,7 @@ class Wiggle:
         out = [np.array([wmap[i] for i in a]) for a in out]
         out = [a.reshape(x[:,:,0].shape) for a in out]
         out = np.stack(out, axis=-1).astype(int)
-        return out
+        return out'''
 
     def random(self, x, num_ops):
         choices = ['poly', 'sinu']
