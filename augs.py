@@ -11,6 +11,23 @@ def load_image(fname, gray=True):
     else:
         return cv2.imread(fname)
 
+#TODO: fix this function to work more accurately -- flattening behavior should not be happening
+def _match_cumulative_cdf(image, mapgen):
+    """
+    Return modified source array so that the cumulative density function of
+    its values matches the cumulative density function of the template.
+    """
+    if len(image.shape) == 3: im = np.ravel(image[:,:,0])
+    else: im = np.ravel(image)
+    im_vals, im_indices, im_counts = np.unique(im, return_inverse=True, return_counts=True) # calculate normalized quantiles for each array
+    im_quantiles = np.cumsum(im_counts) / im.size
+    map_quantiles = np.cumsum(mapgen) / mapgen.size
+    interp_a_values = np.interp(im_quantiles, map_quantiles, mapgen)
+    im = interp_a_values[im_indices].reshape(image.shape[:2])
+    if len(image.shape) == 3: im = np.stack((im,im,im), axis=-1)
+    im = im.astype(int)
+    return im
+
 class MonoFunc:
     def __init__(self, mode='int', gray=True):
         self.float = mode != 'int'
@@ -70,10 +87,9 @@ class Wiggle:
         else:
             a = x[:,:,0]
             x = np.stack((a,a,a), axis=-1)
-        '''if self.gray:
-            return self.wiggle_1ch(x, dev, save_map)
-        else:'''
-        return self.wiggle_3ch(x, dev, save_map)
+        # return self.remap(x, dev, save_map)
+        return self.wiggle_3ch(x, dev)
+
 
     def rand_generator(self, dev, mode):
         if mode == 'unif':
@@ -107,13 +123,18 @@ class Wiggle:
             np.save(save_map, map_out)
         return map_out
 
+    def remap(self, x, dev, save_map=None):
+        wmap = self.wiggle_map(dev, save_map)
+        out = _match_cumulative_cdf(x, wmap)
+        return out
+
     '''def wiggle_1ch(self, x, dev, save_map=None):
         if len(x.shape()) == 3: x = x[:,:,0]
         wmap = self.wiggle_map(dev, save_map)
         out = np.ravel(x)
         out = [wmap[i] for i in out]
         out = np.array(out).astype(int).reshape(x.shape)
-        return out
+        return out'''
 
     def wiggle_3ch(self, x, dev, save_map=None):
         if self.gray: 
@@ -124,7 +145,7 @@ class Wiggle:
         out = [np.array([wmap[i] for i in a]) for a in out]
         out = [a.reshape(x[:,:,0].shape) for a in out]
         out = np.stack(out, axis=-1).astype(int)
-        return out'''
+        return out
 
     def random(self, x, num_ops):
         choices = ['poly', 'sinu']
