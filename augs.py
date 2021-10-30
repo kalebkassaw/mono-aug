@@ -3,6 +3,7 @@ import cv2
 # import albumentations as A
 from functools import partial
 from skimage.exposure import match_histograms
+import scipy.stats as ss
 
 def load_image(fname, gray=True):
     if gray:
@@ -27,6 +28,39 @@ def _match_cumulative_cdf(image, mapgen):
     if len(image.shape) == 3: im = np.stack((im,im,im), axis=-1)
     im = im.astype(int)
     return im
+
+class AtNorm:
+    def __init__(self, ll1=0.1, ul1=99.9, ll2=-5, ul2=10):
+        self.lower_lim1 = ll1
+        self.upper_lim1 = ul1
+        self.lower_lim2 = ll2
+        self.upper_lim2 = ul2
+
+    def __call__(self, x):
+        x = self._clip1(x)
+        x = self._normalize_mad(x)
+        x = self._clip2(x)
+        return x
+
+    def _normalize_mad(x):
+        med = np.median(x, axis=a)[0]
+        mad = np.amax([1.0e-5, ss.median_abs_deviation(x, axis=a)[0]])
+        x = x - med / mad
+        return x
+
+    def _clip1(self, x, lower_lim=0.1, upper_lim=99.9):
+        dn, up = np.percentile(x, [self.lower_lim1, self.upper_lim1])
+        x = np.clip(x, dn, up)
+        x -= np.amin(x)
+        x *= 255 / np.amax(x)
+        return x
+
+    def _clip2(self, x, lower_lim=-5, upper_lim=10):
+        x = np.clip(x, self.lower_lim2, self.upper_lim2)
+        x -= np.amin(x)
+        x *= 255 / np.amax(x)
+        return x
+
 
 class MonoFunc:
     def __init__(self, mode='int', gray=True):
