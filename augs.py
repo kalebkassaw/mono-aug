@@ -41,14 +41,14 @@ class InfoLoss:
         return np.bincount(image.reshape(-1), minlength=256)
 
     def get_entropy(self, image):
-        hist = get_histogram(image)
+        hist = self.get_histogram(image)
         dist = hist / np.sum(hist)
-        return entropy(dist, base=2)
+        return ss.entropy(dist, base=2)
 
     def info_loss(self, I, I_p):
         d_entropy = 0
         for c in range(3):
-            d_entropy += get_entropy(I[:, :, c]) - get_entropy(I_p[:, :, c])
+            d_entropy += self.get_entropy(I[:, :, c]) - self.get_entropy(I_p[:, :, c])
         loss = d_entropy / 3
         fail = loss > self.gamma
         return loss, fail
