@@ -29,6 +29,30 @@ def _match_cumulative_cdf(image, mapgen):
     im = im.astype(int)
     return im
 
+class InfoLoss:
+    def __init__(self, gamma=2.0):
+        self.gamma = gamma
+
+    def __call__(self, orig, mod):
+        loss, fail = self.info_loss(orig, mod)
+        return fail
+
+    def get_histogram(self, image):
+        return np.bincount(image.reshape(-1), minlength=256)
+
+    def get_entropy(self, image):
+        hist = get_histogram(image)
+        dist = hist / np.sum(hist)
+        return entropy(dist, base=2)
+
+    def info_loss(self, I, I_p):
+        d_entropy = 0
+        for c in range(3):
+            d_entropy += get_entropy(I[:, :, c]) - get_entropy(I_p[:, :, c])
+        loss = d_entropy / 3
+        fail = loss > self.gamma
+        return loss, fail
+
 class AtNorm:
     def __init__(self, ll1=0.1, ul1=99.9, ll2=-5, ul2=10):
         self.lower_lim1 = ll1
@@ -37,15 +61,23 @@ class AtNorm:
         self.upper_lim2 = ul2
 
     def __call__(self, x):
+        #print(x.shape)
         x = self._clip1(x)
+        #print(x.shape)
         x = self._normalize_mad(x)
+        #print(x.shape)
         x = self._clip2(x)
+        #print(x.shape)
         return x
 
-    def _normalize_mad(x):
-        med = np.median(x, axis=a)[0]
-        mad = np.amax([1.0e-5, ss.median_abs_deviation(x, axis=a)[0]])
-        x = x - med / mad
+    def _normalize_mad(self, x):
+        med = np.median(x[:,:,2], axis=None) if len(x.shape) == 3 else np.median(x, axis=None)
+        if len(x.shape) == 3:
+            mad = ss.median_abs_deviation(x[:,:,2], axis=None)
+        else:
+            mad = ss.median_abs_deviation(x, axis=None)
+        if mad < 1.0e-5: mad = 1.0e-5
+        x = (x - med) / mad
         return x
 
     def _clip1(self, x, lower_lim=0.1, upper_lim=99.9):
@@ -59,6 +91,7 @@ class AtNorm:
         x = np.clip(x, self.lower_lim2, self.upper_lim2)
         x -= np.amin(x)
         x *= 255 / np.amax(x)
+        #print(x)
         return x
 
 

@@ -6,7 +6,7 @@
 # Temps
 filenames.json
 filewriter.py
-gammas.py
+gammas*
 dists
 *.png
 
