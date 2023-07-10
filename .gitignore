@@ -3,6 +3,13 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+# Temps
+filenames.json
+filewriter.py
+gammas*
+dists
+*.png
+
 # User-specific files
 *.rsuser
 *.suo
@@ -92,6 +99,9 @@ StyleCopReport.xml
 *.pidb
 *.svclog
 *.scc
+
+# Files built by JupyterLab
+.ipynb_checkpoints*
 
 # Chutzpah Test files
 _Chutzpah*
